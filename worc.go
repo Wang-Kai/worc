@@ -7,20 +7,23 @@ import (
 
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/resolver"
 
-	wonaming "github.com/wothing/wonaming/etcd"
+	"github.com/Wang-Kai/hi"
 )
 
 var serviceConns = newSafeMap()
 
 // StartServiceConns start grpc conns with balancer
 func StartServiceConns(address string, serviceList []string) {
+
 	for _, serviceName := range serviceList {
 		go func(name string) {
-			r := wonaming.NewResolver(name)
-			b := grpc.RoundRobin(r)
+			hiBuilder := hi.NewResolverBuilder([]string{address})
+			resolver.Register(&hiBuilder)
 
-			conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBalancer(b))
+			var dialAddr = fmt.Sprintf("%s://foo/%s", hiBuilder.Scheme(), name)
+			conn, err := grpc.Dial(dialAddr, grpc.WithBalancerName("round_robin"), grpc.WithInsecure(), grpc.WithMaxMsgSize(1024*1024*128))
 			if err != nil {
 				log.Printf(`connect to '%s' service failed: %v`, name, err)
 			}
