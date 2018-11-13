@@ -14,15 +14,17 @@ import (
 
 var serviceConns = newSafeMap()
 
+func init() {
+	hiBuilder := hi.NewResolverBuilder([]string{"127.0.0.1:2379"})
+	resolver.Register(&hiBuilder)
+}
+
 // StartServiceConns start grpc conns with balancer
 func StartServiceConns(address string, serviceList []string) {
-
 	for _, serviceName := range serviceList {
 		go func(name string) {
-			hiBuilder := hi.NewResolverBuilder([]string{address})
-			resolver.Register(&hiBuilder)
 
-			var dialAddr = fmt.Sprintf("%s://foo/%s", hiBuilder.Scheme(), name)
+			var dialAddr = fmt.Sprintf("hi://foo/%s", name)
 			conn, err := grpc.Dial(dialAddr, grpc.WithBalancerName("round_robin"), grpc.WithInsecure(), grpc.WithMaxMsgSize(1024*1024*128))
 			if err != nil {
 				log.Printf(`connect to '%s' service failed: %v`, name, err)
